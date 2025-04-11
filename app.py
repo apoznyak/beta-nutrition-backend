@@ -1,15 +1,23 @@
-# AI-Powered Caries Risk Calculator with Severity Score
+# AI-Powered Caries Risk Calculator with Severity Score (Updated Keywords)
+
 from flask import Flask, request, jsonify
 import re
 
 app = Flask(__name__)
 
-# Food scoring dictionary: values increase/decrease risk
+# Improved scoring dictionary with common junk/protective foods
 risk_values = {
-    "soda": 3, "juice": 2, "cake": 3, "candy": 3, "chips": 2, "cookies": 2, "ice cream": 3, "chocolate": 2,
-    "bread": 1, "crackers": 1, "muffin": 2, "smoothie": 2,
-    "apple": -1, "carrot": -1, "celery": -1, "cucumber": -1, "banana": 0,
-    "milk": -2, "cheese": -2, "nuts": -1, "yogurt": -1, "water": -3
+    # High risk foods (3 points)
+    "cake": 3, "candy": 3, "soda": 3, "ice cream": 3, "chocolate": 3,
+    # Moderate risk foods (2 points)
+    "cookies": 2, "chips": 2, "muffin": 2, "juice": 2, "smoothie": 2,
+    # Slight risk (1 point)
+    "crackers": 1, "bread": 1, "cereal": 1,
+    # Neutral (0 points)
+    "banana": 0, "fruit": 0,
+    # Protective foods (-1 to -3)
+    "apple": -1, "carrot": -1, "celery": -1, "cucumber": -1,
+    "milk": -2, "cheese": -2, "yogurt": -2, "nuts": -2, "water": -3
 }
 
 @app.route("/calculate-risk", methods=["POST"])
