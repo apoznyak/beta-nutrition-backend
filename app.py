@@ -1,7 +1,9 @@
-# AI-Powered Caries Risk Calculator with Severity Score (Updated Keywords)
+
+# AI-Powered Caries Risk Calculator with Severity Score (Counts Repeated Foods)
 
 from flask import Flask, request, jsonify
 import re
+from collections import Counter
 
 app = Flask(__name__)
 
@@ -25,10 +27,11 @@ def calculate_risk():
     data = request.get_json()
     food_input = data.get("foodInput", "").lower()
     words = re.findall(r"\b\w+\b", food_input)
+    word_counts = Counter(words)
 
     score = 0
-    for word in words:
-        score += risk_values.get(word, 0)
+    for word, count in word_counts.items():
+        score += risk_values.get(word, 0) * count
 
     score = min(max(score, 0), 10)  # Normalize between 0 and 10
 
