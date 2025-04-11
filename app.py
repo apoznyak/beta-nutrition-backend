@@ -1,54 +1,42 @@
-# AI-Powered Caries Risk Calculator Backend (Flask)
-
+# AI-Powered Caries Risk Calculator with Severity Score
 from flask import Flask, request, jsonify
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-import joblib
-import numpy as np
 import re
 
 app = Flask(__name__)
 
-# Dummy training data (you'll expand this with real samples)
-training_data = [
-    ("soda chips candy", "High"),
-    ("cheese apple water", "Low"),
-    ("bread juice cookies", "Moderate"),
-    ("milk nuts carrots", "Low"),
-    ("smoothie crackers", "Moderate"),
-    ("ice cream chocolate cake", "High")
-]
-
-texts, labels = zip(*training_data)
-vectorizer = TfidfVectorizer()
-X_train = vectorizer.fit_transform(texts)
-
-label_map = {"Low": 0, "Moderate": 1, "High": 2}
-y_train = [label_map[label] for label in labels]
-
-model = LogisticRegression(max_iter=1000)
-model.fit(X_train, y_train)
+# Food scoring dictionary: values increase/decrease risk
+risk_values = {
+    "soda": 3, "juice": 2, "cake": 3, "candy": 3, "chips": 2, "cookies": 2, "ice cream": 3, "chocolate": 2,
+    "bread": 1, "crackers": 1, "muffin": 2, "smoothie": 2,
+    "apple": -1, "carrot": -1, "celery": -1, "cucumber": -1, "banana": 0,
+    "milk": -2, "cheese": -2, "nuts": -1, "yogurt": -1, "water": -3
+}
 
 @app.route("/calculate-risk", methods=["POST"])
 def calculate_risk():
     data = request.get_json()
     food_input = data.get("foodInput", "").lower()
-    clean_input = re.sub(r"[^a-zA-Z\s]", "", food_input)
-    X_input = vectorizer.transform([clean_input])
-    pred = model.predict(X_input)[0]
-    score = float(model.predict_proba(X_input).max())
+    words = re.findall(r"\b\w+\b", food_input)
 
-    reverse_map = {0: "Low", 1: "Moderate", 2: "High"}
-    explanation = {
-        "High": "Your input included several high-sugar or sticky items associated with caries risk.",
-        "Moderate": "Some processed or sugary foods detected. Consider reducing frequency.",
-        "Low": "Your input reflects mostly protective or low-risk items. Keep it up!"
-    }
+    score = 0
+    for word in words:
+        score += risk_values.get(word, 0)
+
+    score = min(max(score, 0), 10)  # Normalize between 0 and 10
+
+    if score >= 8:
+        risk = "High Risk"
+    elif score >= 5:
+        risk = "Moderate Risk"
+    else:
+        risk = "Low Risk"
+
+    explanation = f"Based on the foods you entered, your risk score is {score}. This reflects the balance between cariogenic and protective foods."
 
     return jsonify({
-        "riskLevel": reverse_map[pred],
-        "score": round(score * 10, 2),
-        "explanation": explanation[reverse_map[pred]]
+        "score": round(score, 2),
+        "riskLevel": risk,
+        "explanation": explanation
     })
 
 if __name__ == "__main__":
