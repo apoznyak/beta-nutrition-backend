@@ -1,54 +1,57 @@
 
-# AI-Powered Caries Risk Calculator with Severity Score (Counts Repeated Foods)
-
 from flask import Flask, request, jsonify
-import re
-from collections import Counter
 
 app = Flask(__name__)
 
-# Improved scoring dictionary with common junk/protective foods
-risk_values = {
-    # High risk foods (3 points)
-    "cake": 3, "candy": 3, "soda": 3, "ice cream": 3, "chocolate": 3,
-    # Moderate risk foods (2 points)
-    "cookies": 2, "chips": 2, "muffin": 2, "juice": 2, "smoothie": 2,
-    # Slight risk (1 point)
-    "crackers": 1, "bread": 1, "cereal": 1,
-    # Neutral (0 points)
-    "banana": 0, "fruit": 0,
-    # Protective foods (-1 to -3)
-    "apple": -1, "carrot": -1, "celery": -1, "cucumber": -1,
-    "milk": -2, "cheese": -2, "yogurt": -2, "nuts": -2, "water": -3
+FOOD_CATEGORIES = {
+    "sugary cereal": ("cariogenic", "High sugar content, sticky texture"),
+    "orange juice": ("cariogenic", "Acidic and high in sugar"),
+    "chips": ("cariogenic", "Starch sticks to teeth and feeds bacteria"),
+    "cheese": ("protective", "Buffers acid and stimulates saliva"),
+    "milk": ("protective", "Contains calcium and helps remineralize enamel"),
+    "apple": ("neutral", "Contains natural sugar but also fiber and water"),
+    "grilled chicken": ("neutral", "Low in sugar and not acidic")
 }
 
 @app.route("/calculate-risk", methods=["POST"])
 def calculate_risk():
     data = request.get_json()
     food_input = data.get("foodInput", "").lower()
-    words = re.findall(r"\b\w+\b", food_input)
-    word_counts = Counter(words)
 
-    score = 0
-    for word, count in word_counts.items():
-        score += risk_values.get(word, 0) * count
+    items = [item.strip() for item in food_input.replace("Breakfast:", "")
+                                                 .replace("Lunch:", "")
+                                                 .replace("Dinner:", "")
+                                                 .replace("Snacks:", "")
+                                                 .replace("Drinks:", "").split(",")]
 
-    score = min(max(score, 0), 10)  # Normalize between 0 and 10
+    breakdown = []
+    risk_score = 0
 
-    if score >= 8:
-        risk = "High Risk"
-    elif score >= 5:
-        risk = "Moderate Risk"
+    for item in items:
+        item = item.strip()
+        if item in FOOD_CATEGORIES:
+            category, reason = FOOD_CATEGORIES[item]
+            breakdown.append({"item": item, "category": category, "reason": reason})
+            if category == "cariogenic":
+                risk_score += 2
+            elif category == "protective":
+                risk_score -= 1
+
+    risk_score = max(0, min(10, round(risk_score + 5, 1)))
+
+    if risk_score >= 8:
+        risk_level = "High"
+    elif risk_score >= 5:
+        risk_level = "Moderate"
     else:
-        risk = "Low Risk"
-
-    explanation = f"Based on the foods you entered, your risk score is {score}. This reflects the balance between cariogenic and protective foods."
+        risk_level = "Low"
 
     return jsonify({
-        "score": round(score, 2),
-        "riskLevel": risk,
-        "explanation": explanation
+        "score": risk_score,
+        "riskLevel": risk_level,
+        "explanation": "Based on the balance of cariogenic and protective foods.",
+        "breakdown": breakdown
     })
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
