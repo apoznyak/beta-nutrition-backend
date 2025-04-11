@@ -3,7 +3,6 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Expanded dictionary with lowercase keys and common foods
 FOOD_CATEGORIES = {
     "cake": ("cariogenic", "High in sugar and refined flour"),
     "chocolate": ("cariogenic", "High in sugar and sticky texture"),
@@ -26,25 +25,29 @@ def calculate_risk():
     data = request.get_json()
     food_input = data.get("foodInput", "").lower()
 
-    items = [item.strip() for item in food_input.replace("Breakfast:", "")
-                                                 .replace("Lunch:", "")
-                                                 .replace("Dinner:", "")
-                                                 .replace("Snacks:", "")
-                                                 .replace("Drinks:", "").split(",")]
+    items = [item.strip() for item in food_input.replace("breakfast:", "")
+                                                 .replace("lunch:", "")
+                                                 .replace("dinner:", "")
+                                                 .replace("snacks:", "")
+                                                 .replace("drinks:", "").split(",")]
 
     breakdown = []
     risk_score = 0
 
     for item in items:
         item = item.strip()
-        if item in FOOD_CATEGORIES:
-            category, reason = FOOD_CATEGORIES[item]
-            breakdown.append({"item": item, "category": category, "reason": reason})
-            if category == "cariogenic":
-                risk_score += 2
-            elif category == "protective":
-                risk_score -= 1
-        else:
+        matched = False
+        for key in FOOD_CATEGORIES:
+            if key in item:
+                category, reason = FOOD_CATEGORIES[key]
+                breakdown.append({"item": item, "category": category, "reason": reason})
+                if category == "cariogenic":
+                    risk_score += 2
+                elif category == "protective":
+                    risk_score -= 1
+                matched = True
+                break
+        if not matched:
             breakdown.append({"item": item, "category": "unknown", "reason": "Not found in food database"})
 
     risk_score = max(0, min(10, round(risk_score + 5, 1)))
